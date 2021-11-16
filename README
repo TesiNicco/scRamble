@@ -1,7 +1,3 @@
-# ciao
-## come stai
-### bene bene
-############################################################
 ############################################################
 This is scRamble
 
@@ -9,34 +5,33 @@ A pipeline written in R to scramble chromosomes across a set of individuals to a
 This should be done prior to submittion to non-European imputation panels due to privacy laws in the European union.
 
 To run scRamble, move into the scRamble directory, then type:
-Rscript bin/scRamble.R [input.vcf.gz] [output_directory_name]
+Rscript bin/scRamble.R -help
+This will show a short description of the option you need to give scRamble.
 
-For example, assuming that (i) the input file is called /path/to/chrAll.input.vcf.gz, and (ii) you want the output files to 
-be placed in folder path/to/scrambled_genotypes, then type:
-Rscript bin/scRamble.R path/to/chrAll.input.vcf.gz path/to/scrambled_genotypes
+For example, assuming that (i) the input file is called chrAll.input.vcf.gz, and (ii) you want the output files to be placed in folder scrambled_genotypes, (iii) you care about sexual chromosomes and (iv) the reference genome used is hg38, then type:
+
+Rscript bin/scRamble.R chrAll.input.vcf.gz scrambled_genotypes yes hg38
 
 After the run, you will find in the desired folder three output files:
-1. the scrambled file in VCF format [chrAll_input_scrambled.vcf.gz]
-2. mapping file to be used for unscrambling [Mapping_file.txt]
-3. a log file of the latest command to check whether number of samples and variants are the same as the starting file [chrAll_input_scrambled.log]
+1. the scrambled file in VCF format [chrAll_input_scrambled.vcf.gz] --> input for genotype imputation on TOPMED server
+2. mapping file to be used for unscrambling [Mapping_file.txt] --> this will be used to reconstruct the genotypes
 
 As it is virtually impossible to reconstruct the entire individual genotype without the key, these file can be shared and used for imputation.
 
-###########################################################
 ###########################################################
 
 After imputation is performed, you want to unscramble the outputs and reconstruct the original genotypes.
 
 To do so, move into the scRamble directory and type:
-Rscript bin/unscRamble.R [mapping_file.txt] [chr1_imputed.vcf.gz] [output_directory]
+Rscript bin/unscRamble.R -help
+Similarly to the above command, this will show a short description of the option you need to give to unscRamble.
 
-For example, assuming that (i) mapping file is called Mapping_file.txt, (ii) the imputed file, usually already divided in chromosomes, 
-is called chr1_imputed.vcf.gz (make sure to specificy chromosome 1 here) and (iii) the output directory is out_unscrambled, then type:
-Rscript bin/unscRamble.R path/to/Mapping_file.txt path/to/chr1_imputed.vcf.gz path/to/output_directory
+For example, assuming that (i) mapping file is called Mapping_file.txt, (ii) the imputed file, usually already divided in chromosomes, is called chr1_imputed.vcf.gz, (iii) you care about sexual chromosomes, and (iv) the output directory is out_unscrambled, then type:
 
-After the run, you will find all chromosomes in individual files (PLINK2 format) in the desired folder.
+Rscript bin/unscRamble.R Mapping_file.txt chr1_imputed_scrambled.vcf.gz yes out_unscrambled
 
-###########################################################
+After the run, you will find all chromosomes in individual files in VCF format in the desired folder.
+
 ###########################################################
 
 For any question, comment, bug report or suggestion, please email ntesi@amsterdamumc.nl
