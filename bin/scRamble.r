@@ -139,6 +139,7 @@ try(system(paste0("rm ", args[2], "/*fam")), silent=T)
 
 # Finally add 'chr' if Reference genome is GRCh38 and update the contig IDs
 if (args[4] %in% c("GRCh38", "hg38", "HG38")){
+    print("## Adjusting chromosome code for GRCh38")
     cmd = paste0("zcat ", args[2], "/chrAll_input_scrambled.vcf.gz | awk '{if($0 !~ /^#/) print \"chr\"$0; else print $0}' > ", args[2], "/chrAll_input_scrambled.vcf")
     system(cmd)
     cmd = paste0("sed 's/contig=<ID=/contig=<ID=chr/g' ", args[2], "/chrAll_input_scrambled.vcf | sed 's/ID=chr23/ID=chrX/g' > ", args[2], "/chrAll_input_scrambled_updated.vcf")
@@ -149,6 +150,7 @@ if (args[4] %in% c("GRCh38", "hg38", "HG38")){
 
 # Last thing is that if chrX is there it is called chr23 --> change the name now
 if (args[3] %in% c("yes", "YES")){
+    print("## Adjusting chromosome code for chromosome X")
     cmd = paste0("sed 's/chr23/chrX/g' ", args[2], "/chrAll_input_scrambled.vcf > ", args[2], "/chrAll_input_scrambled_updated.vcf")
     system(cmd)
     system(paste0("rm ", args[2], "/chrAll_input_scrambled.*"))
@@ -156,6 +158,7 @@ if (args[3] %in% c("yes", "YES")){
 }
 
 # Finally, sort, index and divide in chromosomes
+print("## Sorting and indexing final file")
 cmd_sort = paste0("bcftools sort -Oz -o ", args[2], "/chrAll_input_scrambled_sorted.vcf.gz ", args[2], "/chrAll_input_scrambled.vcf")
 system(cmd_sort)
 cmd_index = paste0("bcftools index ", args[2], "/chrAll_input_scrambled_sorted.vcf.gz ")
