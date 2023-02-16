@@ -127,7 +127,7 @@ print("## Start with merging.")
 res <- function_merge(args[2], args[3])
 print("## Done with merging. A VCF file with scrambled individual IDs has been created")
 
-# Clean shit up
+# Clean things up
 try(system(paste0("rm ", args[2], "/fileList_toMerge.txt")), silent=T)
 try(system(paste0("rm ", args[2], "/*nosex")), silent=T)
 try(system(paste0("for chr in {1..22}; do rm ", args[2], "/chr${chr}_*; done")), silent=T)
