@@ -7,7 +7,7 @@ args = commandArgs(trailingOnly = TRUE)
 ### Functions
 # Function to take the VCF file (inputation input) and generate 22 PLINK files (1 per chromosome)
 function_split <- function(i, finp, out){
-        if (i == 1){ cmd = paste0("plink --vcf ", finp, " --real-ref-alleles --make-bed --out ", out, "/chrAll_input --threads 4"); system(cmd, ignore.stdout=T) }
+        if (i == 1){ cmd = paste0("plink2 --vcf ", finp, " --real-ref-alleles --make-bed --out ", out, "/chrAll_input --threads 4"); system(cmd, ignore.stdout=T) }
         if (i == 23){ i = "X" }
         cmd = paste0("plink2 --bfile ", out, "/chrAll_input --chr ", i, " --real-ref-alleles --make-pgen --out ", out, "/chr", i, "_input --threads 4")
         system(cmd, ignore.stdout=T)
