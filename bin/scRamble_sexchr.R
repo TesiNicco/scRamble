@@ -187,3 +187,5 @@ cmd_divide = paste0("for chr in {1..22} X; do bcftools view ", args[2], "/chrAll
 system(cmd_divide)
 print("## Cleaning data.")
 system(paste0("rm ", args[2], "/chrAll*"))
+print("## Done. Goodbye!")
+
