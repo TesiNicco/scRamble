@@ -1,6 +1,6 @@
 ############################################################
 ############################################################
-This is scRamble
+This is scRambleeeee
 
 A pipeline written in R to scramble chromosomes across a set of individuals to avoid concerns about privacy of genetic data.
 This should be done prior to submittion to non-European imputation panels due to privacy laws in the European union.
