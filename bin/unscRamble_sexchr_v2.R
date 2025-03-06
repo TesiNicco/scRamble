@@ -10,8 +10,16 @@ unscramble = function(i, key, filelist, out_path){
     print(paste0("# Started with chromosome ", i))
     # Take chromosome of interest
     data_interest = filelist[i]
-    key_interest = data.frame(key)[, c(1, i+2)]
-    colnames(key_interest) = c("real_name", "scrambled_name")
+    # grep index of FID old column
+    index_fid = grep("FID", colnames(key))
+    # grep index of the IID old column
+    index_iid = grep("IID", colnames(key))
+    # grep index of the FAID column
+    index_faid = grep("FAID", colnames(key))
+    # create dataframe with the old IDs (FID and IID) and the new IDs (FAID and chromosome-specific)
+    key_interest = data.frame(key, check.names=F)[, c(index_fid, index_iid, index_faid, index_faid + i)]
+    # rename columns
+    colnames(key_interest) = c("real_family_name", "real_sample_name", "scrambled_name_family", "scrambled_name")
     # Extract samples names
     #header = unlist(strsplit(system(paste0("zcat ", data_interest, " | head -19 | tail -1"), inter=T), "\t"))
     header = unlist(strsplit(system(paste0("bcftools view -h ", data_interest, " | tail -1"), intern=T), "\t"))
@@ -20,6 +28,8 @@ unscramble = function(i, key, filelist, out_path){
     header_merged = merge(header, key_interest, by.x = "scrambled", by.y = "scrambled_name")
     # Re-order -- just in case
     header_merged = header_merged[order(header_merged$order), ]
+    # create new id column mergring family and sample name
+    header_merged$real_name = paste(header_merged$real_family_name, header_merged$real_sample_name, sep="_")
     # Ok, now write the temporary mapping file
     write.table(header_merged$real_name, "tmp.txt", quote=F, row.names=F, col.names=F)
     # Now we have to use bcftools to update names
