@@ -24,6 +24,11 @@ function_generate <- function(out, sex_chromosomes){
         # open the first
         d <- fread(listFiles[1], h=T, check.names=F)
 
+        # add family ID if missing
+        if (!any(grepl("FID", colnames(d)))){
+            d$FID = 0
+        }
+
         # add new family ID as 0
         d$FAID = 0
 
@@ -58,6 +63,13 @@ function_scramble <- function(i, key, out){
 
         # find the index of the IID column
         index_id = which(colnames(key) == 'IID')
+        if (length(index_id) == 0){
+            index_id = grep('#IID', colnames(key))
+        }
+        if (length(index_id) == 0){
+            # stop the script with error
+            stop("## Error: No IID or #IID column found in the mapping file. Please check the input file.")
+        }
 
         # find the index of the new FID
         index_newfid = which(colnames(key) == 'FAID')
