@@ -1,10 +1,10 @@
-# scRamble
+## scRamble
 **scRamble** is an R pipeline designed to scramble chromosomes across individuals to protect genetic data privacy. This is crucial before submitting data to non-European imputation panels due to EU privacy laws.
 
-# In a nutshell
+## In a nutshell
 The GDPR regulations prohibit sharing genetic data outside the EU, posing challenges for collaboration and data processing on non-EU servers. Genotype imputation, often hosted in the US (https://imputation.biodatacatalyst.nhlbi.nih.gov/), requires uploading genetic data, conflicting with GDPR. scRamble addresses this by shuffling chromosomes across individuals, making genome reconstruction impossible without a key. It generates random sample identifiers and shuffles data while retaining a local key for reassembly. Post-shuffling, the data can be used for genotype imputation without compromising quality. After imputation, scRamble reorders chromosomes to their original state.
 
-# Installation
+## Installation
 Clone the `scRamble` package:
 ```sh
 git clone https://github.com/TesiNicco/scRamble.git
@@ -21,35 +21,36 @@ conda activate scRamble
 ```
 You may need to install `R` packages manually.
 
-# Input data
-Provide a single VCF file with all SNPs and individuals, and specify the output directory for scrambled genotypes.
-
-# How to run
-Run scRamble:
-```sh
-Rscript path/to/scRamble/bin/scRamble.R [path/to/input.vcf.gz] [path/to/output_directory_name] [consider sex chromosome (yes/no)] [reference genome (hg19/hg38)]
+## How to use
+By running:  
+```console
+./bin/scRamble.R -h
+./bin/unscRamble.R -h
 ```
-Example:
-```sh
-Rscript bin/scRamble_sexchr.R chrAll.input.vcf.gz scrambled_genotypes yes hg38
-```
-Ensure data alignment with the reference genome. The process may take several minutes.
+will display the help message. `scRamble` parameters are:
+- `--vcf` (**Mandatory**): path to genotype data in VCF format. This is often the input data for genotype imputation.
+- `--out` (**Mandatory**): path to the output folder where results will be stored. Please use a new folder (`scRamble` will create the folder if not present).
+- `--ref` (**Mandatory**): reference genome build used. Choices are hg19 or hg38.
+- `--sex` (*Optional, flag*): flag to indicate whether sex chromosomes should be considered or not.
 
-# Output scrambled data
-The output folder will contain:
-1. Scrambled VCF files, one per chromosome, sorted and indexed.
-2. A mapping file for unscrambling (`Mapping_file.txt`).
+`unscRamble` parameters are;
+- `--map` (**Mandatory**): path to the Mapping file, created with `scRamble`.
+- `--vcf` (**Mandatory**): path to the imputed VCF files. Normally, these come split by chromosome. You just need to indicate the path to chr1 file (e.g, chr1.imputed.vcf.gz).
+- `--out` (**Mandatory**): path to the output folder where results will be stored. Please use a new folder (`unscRamble` will create the folder if not present).
+- `--sex` (*Optional, flag*): flag to indicate whether sex chromosomes should be considered or not.
 
-# Reconstruct original data after imputation
-To unscramble and reconstruct original genotypes post-imputation:
+## Examples
+Run `scRamble`:
 ```sh
-Rscript path/to/bin/unscRamble.R [path/to/Mapping_file.txt] [path/to/chr1_imputed.vcf.gz] [consider sex chromosome (yes/no)] [path/to/output_directory]
+scRamble.R --vcf [path/to/input.vcf.gz] --out [path/to/output_directory_name] --ref [hg19/hg38] [--sex (add the flag to consider X chromosome)]
 ```
-Example:
-```sh
-Rscript bin/unscRamble.R path/to/Mapping_file.txt path/to/chr1_imputed.vcf.gz yes path/to/output_directory
-```
-The output folder will contain individual VCF files for each chromosome.
+Depending on the number of samples and number of variants, this can take several minutes.  
 
-# Questions/Comments/Feedback
+Run `unscRamble`:
+```sh
+unscRamble.R --map [path/to/mapping_file.txt] --vcf [path/to/input.vcf.gz] --out [path/to/output_directory_name] [--sex (add the flag to consider X chromosome)]
+```
+Depending on the number of samples and number of variants, this can take several minutes.  
+
+## Questions/Comments/Feedback
 For questions, comments, bug reports, or suggestions, email `n.tesi@amsterdamumc.nl`.

@@ -1,114 +1,111 @@
+#!/usr/bin/Rscript
+
 # Libraries
-library(data.table)
-library(stringr)
-args = commandArgs(trailingOnly = TRUE)
+    library(argparse)
+    library(data.table)
+    library(stringr)
+    args <- commandArgs(trailingOnly = FALSE)
 
 # Functions
-# Function to unscramble (this assumes that there is 1 PLINK2 file per chromosome)
-function_unscramble <- function(i, key, out_dir, conv_filelist){
-    # Grep file related to chromosome i
-    fint <- conv_filelist[grep(paste0("chr", i, "\\."), conv_filelist)]
-    
-    # Read scrambled file (.psam)
-    scramb <- fread(paste0(fint, ".psam"), h=T)
-
-    # Generate temporary file for the new list of keys
-    tmp <- key[, c(..i+2, 1)]
-    tmp <- tmp[order(tmp[,1]),]
-    write.table(tmp, paste0(out_dir, "/tmp_mapping.txt"), quote=F, row.names=F, col.names=F, sep="\t")
-
-    # Generate output name
-    fout = paste0(fint, "_unscrambled")
-
-    # run plink2 to update IDs
-    cmd <- paste0("plink2 --pfile ", fint, " --update-ids ", out_dir, "/tmp_mapping.txt --make-pgen --out ", fout)
+unscramble = function(i, key, filelist, out_path){
+    print(paste0("# Started with chromosome ", i))
+    # Take chromosome of interest
+    data_interest = filelist[i]
+    # grep index of FID old column
+    index_fid = grep("FID", colnames(key))
+    # grep index of the IID old column
+    index_iid = grep("IID", colnames(key))
+    # grep index of the FAID column
+    index_faid = grep("FAID", colnames(key))
+    # create dataframe with the old IDs (FID and IID) and the new IDs (FAID and chromosome-specific)
+    key_interest = data.frame(key, check.names=F)[, c(index_fid, index_iid, index_faid, index_faid + i)]
+    # rename columns
+    colnames(key_interest) = c("real_family_name", "real_sample_name", "scrambled_name_family", "scrambled_name")
+    # Extract samples names
+    #header = unlist(strsplit(system(paste0("zcat ", data_interest, " | head -19 | tail -1"), inter=T), "\t"))
+    header = unlist(strsplit(system(paste0("bcftools view -h ", data_interest, " | tail -1"), intern=T), "\t"))
+    header = data.frame(scrambled = header[10:length(header)], order = seq(1, length(header[10:length(header)])))
+    # Merge with mapping file
+    header_merged = merge(header, key_interest, by.x = "scrambled", by.y = "scrambled_name")
+    # Re-order -- just in case
+    header_merged = header_merged[order(header_merged$order), ]
+    # create new id column mergring family and sample name
+    header_merged$real_name = paste(header_merged$real_family_name, header_merged$real_sample_name, sep="_")
+    # Ok, now write the temporary mapping file
+    write.table(header_merged$real_name, "tmp.txt", quote=F, row.names=F, col.names=F)
+    # Now we have to use bcftools to update names
+    cmd = paste0("bcftools reheader -s tmp.txt -o ", out_path, "/chr", i, ".dose.unscrambled.vcf.gz ", data_interest)  
     system(cmd)
-
-    # remove key
-    system(paste0("rm ", out_dir, "/tmp_mapping.txt"))
-
-    # remove scrambled file
-    system(paste0("rm ", fint, ".*"))
-
-    return(paste0("Done with chromosome ", i))
-}
-
-# Function to convert VCF files into plink2 files
-function_convert <- function(i, filelist, out_dir){
-    # Get file to work on
-    fn <- filelist[i]
-
-    # Change output name
-    fname_tmp = unlist(strsplit(fn, "/"))
-    fname_tmp2 = str_split_fixed(fname_tmp[length(fname_tmp)], ".vcf.gz", 2)
-    
-    # The convert
-    cmd = paste0("plink2 --vcf ", fn, " --make-pgen --out ", out_dir, "/", fname_tmp2[,1])
-    system(cmd)
-
-    return("Done")
-}
-
-# Function to check whether everything went fine
-function_check <- function(){
-    print("## Checking whether UNscramble succedeed")
-
-    # take randomly 1000 snps from the .bim file (chr1 for easyness)
-    pvar <- fread("chr1_GSA12_input_updated.pvar", h=F)
-    random_snps <- pvar[sample(1:nrow(pvar), 10000)]
-
-    # extract these snps in 1 individual (1_71457 --> 215409 for chr1)
-    sample_to_look <- data.frame(IID = "1_71457")
-    write.table(random_snps$V3, "tmp_check_unscramble.txt", quote=F, row.names=F, col.names=F)
-    write.table(sample_to_look, "tmp_check_unscramble_sample.txt", quote=F, row.names=F, col.names=F)
-    cmd = "plink2 --pfile chr1_GSA12_input_updated --extract tmp_check_unscramble.txt --keep tmp_check_unscramble_sample.txt --export A --out tmp_check_scramble_dosages.txt"
-    system(cmd)
-
-    # for comparison do the same extract 
-    cmd = paste0("plink2 --vcf ", finp, " --chr 1 --keep tmp_check_unscramble_sample.txt --make-pgen --out tmp_check_chr1_original")
-    system(cmd)
-    cmd = paste0("plink2 --pfile tmp_check_chr1_original --extract tmp_check_unscramble.txt --export A --out tmp_check_scramble_dosages_original.txt")
-    system(cmd)
-
-    # read files back in
-    unsc <- fread("tmp_check_scramble_dosages.txt.raw", h=T)
-    orig <- fread("tmp_check_scramble_dosages_original.txt.raw", h=T)
-
-    # parse them
-    unsc <- unsc[, 7:ncol(unsc)]
-    dos_unsc_t <- as.data.frame(t(unsc))
-    orig <- orig[, 7:ncol(orig)]
-    dos_orig_t <-   as.data.frame(t(orig))
-
-    # match columns
-    together <- merge(dos_unsc_t, dos_orig_t, by="row.names")
-    colnames(together) <- c("SNP", "UNSC", "OR")
-    together <- together[!is.na(together$UNSC),]
-    together <- together[!is.na(together$OR),]
-
-    # then do correlation
-    print(paste0("Correlation between variants is ", cor(together$UNSC, together$OR)))
-
-    return("## Done with check.")
+    # Remove temporary mapping file
+    system(paste0("rm tmp.txt"))
+    return(paste("# Done with chromosome ", i))
 }
 
 # Main
-# Read mapping file
-key <- fread(args[1], h=T)
+# Parse arguments
+    parser <- ArgumentParser(description='unscRamble: given scrambled VCF files and a mapping file, unscramble the VCF files to reconstruct the original individual genotypes.')
+    # Required arguments
+        # Mapping file
+        parser$add_argument('--map', type='character', help='Mapping file with the scrambled and real IDs.', required=TRUE)
+        # VCF file(s)
+        parser$add_argument('--vcf', type='character', help='Input VCF file(s) with scrambled IDs. Imputation output is normally split by chromosome. You just need to indicate chr1 file (e.g chr1.imputed.vcf.gz)', required=TRUE)
+        # Sex chromosomes
+        parser$add_argument("--sex", help="When present, sex chromosomes will also be scrambled.", action = "store_true", default = FALSE)
+        # Output directory
+        parser$add_argument('--out', type='character', help='Output directory, where unscRambled VCF files will be placed.', required=TRUE)
 
-# Identify files name
-fnames <- str_split_fixed(args[2], "chr[0-22]", 2)
-filelist <- paste0(fnames[,1], "chr", seq(1,22), fnames[,2])
+# Read arguments
+    args = parser$parse_args()
+    mapping_file = args$map
+    input_vcf = args$vcf
+    sex_chromosomes = args$sex
+    output_folder = args$out
 
-# Create output directory first
-system(paste0("mkdir ", args[3]))
+# Print settings of the run
+    cat("\n\n")
+    cat("*** Welcome to unscRamble ***\n")
+    cat("** Your settings are:")
+    cat(paste0("\n** Mapping file --> ", mapping_file))
+    cat(paste0("\n** Input VCF --> ", input_vcf))
+    cat(paste0("\n** Output folder --> ", output_folder))
+    cat(paste0("\n** Consider sex chromosomes --> ", sex_chromosomes))
+    cat("\n\n")
 
-# Then we need to convert to plink2 as most of the times this is VCF file
-res <- lapply(1:22, function_convert, filelist = filelist, out_dir = args[3])
+# Check if the mapping file exists and in case read it
+    if (!file.exists(mapping_file)){
+        stop(paste0("** The mapping file ", mapping_file, " does not exist. Please check the path and try again."))
+    }
+    cat(paste0("** The mapping file exists.\n\n"))
+    key <- fread(mapping_file, h=T)
 
-# Get all converted files
-conv_filelist <- system(paste0("ls ", args[3], "/*log | sed 's/.log//g'"), intern=T)
+# Check if the input VCF file exists and in case process it
+    if (!file.exists(input_vcf)){
+        stop(paste0("** The input VCF file ", input_vcf, " does not exist. Please check the path and try again."))
+    }
+    cat(paste0("** The input VCF file exists.\n\n"))
+    fnames <- str_split_fixed(input_vcf, "chr[0-22]", 2)
+    if (sex_chromosomes == TRUE){
+        filelist <- paste0(fnames[,1], "chr", c(seq(1,22), "X"), fnames[,2])
+    } else {
+        filelist <- paste0(fnames[,1], "chr", seq(1,22), fnames[,2])
+    }
 
-# Run function to unscramble
-res <- lapply(1:22, function_unscramble, key = key, out_dir = args[3], conv_filelist)
+# Check if output directory exists and in case create it
+    if (dir.exists(output_folder)){
+        stop(paste0("** The output folder '", output_folder, "' already exists. We recommend using a fresh directory."), call. = FALSE)
+    } else {
+        success <- tryCatch({
+            dir.create(output_folder, recursive = TRUE)
+        }, error = function(e) {
+            stop(paste0("** Failed to create output folder '", output_folder, "'. Error: ", conditionMessage(e)), call. = FALSE)
+        })
+        cat("** Created output folder:", output_folder, "\n")
+    }
+
+# Run for all chromosomes
+    if (sex_chromosomes == TRUE){
+        res <- lapply(1:23, unscramble, key = key, filelist = filelist, out_path = output_folder)
+    } else {
+        res <- lapply(1:22, unscramble, key = key, filelist = filelist, out_path = output_folder)
+    }
 
