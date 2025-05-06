@@ -42,13 +42,15 @@ will display the help message. `scRamble` parameters are:
 ## Examples
 Run `scRamble`:
 ```sh
-scRamble.R --vcf [path/to/input.vcf.gz] --out [path/to/output_directory_name] --ref [hg19/hg38] [--sex (add the flag to consider X chromosome)]
+scRamble.R --vcf example_data/chrAll_1000Genome_sample10K_hg19.vcf.gz --out example_data/example_hg19 --ref hg19 [--sex (add the flag to consider X chromosome)]
+scRamble.R --vcf example_data/chrAll_1000Genome_sample10K_hg38.vcf.gz --out example_data/example_hg38 --ref hg38 [--sex (add the flag to consider X chromosome)]
 ```
 Depending on the number of samples and number of variants, this can take several minutes.  
 
 Run `unscRamble`:
 ```sh
-unscRamble.R --map [path/to/mapping_file.txt] --vcf [path/to/input.vcf.gz] --out [path/to/output_directory_name] [--sex (add the flag to consider X chromosome)]
+unscRamble.R --map example_data/example_hg19/Mapping_file.txt --vcf example_data/example_hg19/chr1_input_scrambled.vcf.gz --out example_data/example_hg19/unscRamble [--sex (add the flag to consider X chromosome)]
+unscRamble.R --map example_data/example_hg38/Mapping_file.txt --vcf example_data/example_hg38/chr1_input_scrambled.vcf.gz --out example_data/example_hg38/unscRamble [--sex (add the flag to consider X chromosome)]
 ```
 Depending on the number of samples and number of variants, this can take several minutes.  
 
