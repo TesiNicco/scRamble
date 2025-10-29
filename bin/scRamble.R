@@ -15,8 +15,14 @@
 
 # Functions
     # Function to take the VCF file (inputation input) and generate 22 PLINK files (1 per chromosome)
-    function_split <- function(i, finp, out){
-            if (i == 1){ cmd = paste0("plink --vcf ", finp, " --real-ref-alleles --make-bed --out ", out, "/chrAll_input --threads 4"); system(cmd, ignore.stdout=T) }
+    function_split <- function(i, finp, out, const_FID){
+            if (i == 1){ 
+                if (const_FID == TRUE){
+                    cmd = paste0("plink --vcf ", finp, " --real-ref-alleles --make-bed --out ", out, "/chrAll_input --threads 4 --const-fid"); system(cmd, ignore.stdout=T) 
+                } else {
+                    cmd = paste0("plink --vcf ", finp, " --real-ref-alleles --make-bed --out ", out, "/chrAll_input --threads 4"); system(cmd, ignore.stdout=T) 
+                }
+            }
             if (i == 23){ i = "X" }
             cmd = paste0("plink2 --bfile ", out, "/chrAll_input --chr ", i, " --real-ref-alleles --make-pgen --out ", out, "/chr", i, "_input --threads 4")
             system(cmd, ignore.stdout=T)
@@ -127,6 +133,8 @@
         parser$add_argument("--ref", help="Reference genome build used.", type = "character", choices = c('hg19', 'hg38'), required = TRUE)
         # Sex chromosomes
         parser$add_argument("--sex", help="When present, sex chromosomes will also be scrambled.", action = "store_true", default = FALSE)
+        # Flag for FID
+        parser$add_argument("--constFID", help="When present, family IDs (FIDs) will be all set to default (Useful if sample name contains multiple '_').", action = "store_true", default = FALSE)
 
 # Read arguments
     args = parser$parse_args()
@@ -134,6 +142,7 @@
     output_folder = args$out
     reference_genome = args$ref
     sex_chromosomes = args$sex
+    const_FID = args$constFID
 
 # Print settings of the run
     cat("\n\n")
@@ -143,6 +152,7 @@
     cat(paste0("\n** Output folder --> ", output_folder))
     cat(paste0("\n** Reference genome --> ", reference_genome))
     cat(paste0("\n** Consider sex chromosomes --> ", sex_chromosomes))
+    cat(paste0("\n** Constant FID --> ", const_FID))
     cat("\n\n")
 
 # Check if the input file exists
@@ -165,9 +175,9 @@
 # First is the split of the main VCF into separate files per chromosome
     cat("** Start with splitting main VCF into chromosome-specific PLINK files.\n")
     if (sex_chromosomes == TRUE){
-        res <- lapply(1:23, function_split, finp = input_vcf, out = output_folder)
+        res <- lapply(1:23, function_split, finp = input_vcf, out = output_folder, const_FID = const_FID)
     } else {
-        res <- lapply(1:22, function_split, finp = input_vcf, out = output_folder)
+        res <- lapply(1:22, function_split, finp = input_vcf, out = output_folder, const_FID = const_FID)
     }
     cat("** Done with splitting main VCF into chromosome-specific PLINK files.\n\n")
 
