@@ -7,10 +7,14 @@
     args <- commandArgs(trailingOnly = FALSE)
 
 # Functions
-unscramble = function(i, key, filelist, out_path){
+unscramble = function(i, key, filelist, out_path, single_chromosome){
     print(paste0("# Started with chromosome ", i))
     # Take chromosome of interest
-    data_interest = filelist[i]
+    if (single_chromosome == TRUE){
+        data_interest = filelist[1]
+    } else {
+        data_interest = filelist[i]
+    }
     # grep index of FID old column
     index_fid = grep("FID", colnames(key))
     # grep index of the IID old column
@@ -53,6 +57,8 @@ unscramble = function(i, key, filelist, out_path){
         parser$add_argument("--sex", help="When present, sex chromosomes will also be scrambled.", action = "store_true", default = FALSE)
         # Output directory
         parser$add_argument('--out', type='character', help='Output directory, where unscRambled VCF files will be placed.', required=TRUE)
+        # Flag to indicate whether a single chromosome should be performed
+        parser$add_argument("--single", help="When present, only a single chromosome will be processed.", action = "store_true", default = FALSE)
 
 # Read arguments
     args = parser$parse_args()
@@ -60,6 +66,7 @@ unscramble = function(i, key, filelist, out_path){
     input_vcf = args$vcf
     sex_chromosomes = args$sex
     output_folder = args$out
+    single_chromosome = args$single
 
 # Print settings of the run
     cat("\n\n")
@@ -69,6 +76,7 @@ unscramble = function(i, key, filelist, out_path){
     cat(paste0("\n** Input VCF --> ", input_vcf))
     cat(paste0("\n** Output folder --> ", output_folder))
     cat(paste0("\n** Consider sex chromosomes --> ", sex_chromosomes))
+    cat(paste0("\n** Process a single chromosome --> ", single_chromosome))
     cat("\n\n")
 
 # Check if the mapping file exists and in case read it
@@ -83,11 +91,18 @@ unscramble = function(i, key, filelist, out_path){
         stop(paste0("** The input VCF file ", input_vcf, " does not exist. Please check the path and try again."))
     }
     cat(paste0("** The input VCF file exists.\n\n"))
-    fnames <- str_split_fixed(input_vcf, "chr[0-22]", 2)
-    if (sex_chromosomes == TRUE){
-        filelist <- paste0(fnames[,1], "chr", c(seq(1,22), "X"), fnames[,2])
+    if (single_chromosome == TRUE){
+        cat("** Processing a single chromosome as requested.\n\n")
+        filelist <- c(input_vcf)
+        chrom_interest = str_replace_all(str_extract(input_vcf, "chr[0-9XY]+"), 'chr', '')
+        chrom_interest = ifelse(chrom_interest == "X", 23, as.numeric(chrom_interest))
     } else {
-        filelist <- paste0(fnames[,1], "chr", seq(1,22), fnames[,2])
+        fnames <- str_split_fixed(input_vcf, "chr[0-22]", 2)
+        if (sex_chromosomes == TRUE){
+            filelist <- paste0(fnames[,1], "chr", c(seq(1,22), "X"), fnames[,2])
+        } else {
+            filelist <- paste0(fnames[,1], "chr", seq(1,22), fnames[,2])
+        }
     }
 
 # Check if output directory exists and in case create it
@@ -103,9 +118,13 @@ unscramble = function(i, key, filelist, out_path){
     }
 
 # Run for all chromosomes
-    if (sex_chromosomes == TRUE){
-        res <- lapply(1:23, unscramble, key = key, filelist = filelist, out_path = output_folder)
+    if (single_chromosome == TRUE){
+        res <- unscramble(chrom_interest, key = key, filelist = filelist, out_path = output_folder, single_chromosome = TRUE)
     } else {
-        res <- lapply(1:22, unscramble, key = key, filelist = filelist, out_path = output_folder)
+        if (sex_chromosomes == TRUE){
+            res <- lapply(1:23, unscramble, key = key, filelist = filelist, out_path = output_folder, single_chromosome = FALSE)
+        } else {
+            res <- lapply(1:22, unscramble, key = key, filelist = filelist, out_path = output_folder, single_chromosome = FALSE)
+        }
     }
 
